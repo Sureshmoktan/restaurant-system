@@ -1,0 +1,20 @@
+{
+  "name": "restaurant-system",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "server":      "cd server && npm run dev",
+    "client":      "cd client && npm run dev",
+    "dev":         "concurrently \"npm run server\" \"npm run client\"",
+    "build":       "cd client && npm run build",
+    "start":       "cd server && npm start",
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
