@@ -510,11 +510,14 @@ function FeedbackModal({ billId, tableNumber, onDone }) {
   const [done,           setDone]           = useState(false)
 
   // auto-close thank-you screen after 5 s
+  const onDoneRef = useRef(onDone)
+  useEffect(() => { onDoneRef.current = onDone }, [onDone])
+
   useEffect(() => {
     if (!done) return
-    const t = setTimeout(onDone, 5000)
+    const t = setTimeout(() => onDoneRef.current(), 5000)
     return () => clearTimeout(t)
-  }, [done, onDone])
+  }, [done])
 
   const toggleCategory = (key) =>
     setCategories(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])
@@ -718,6 +721,15 @@ function BillModal({ tableNumber, onClose, billId, setBillId }) {
         .catch(() => {})
     }
   }, [bill?.discountGameEnabled, bill?.discountGamePlayed])
+
+  // Keep polling the bill after it's found so the customer sees the game banner
+  // if the cashier enables the game while the bill view is already open.
+  // Stop polling once paid or game already played (no more state changes expected).
+  useEffect(() => {
+    if (!bill || bill.paymentStatus === "paid" || bill.discountGamePlayed) return
+    const id = setInterval(() => fetchBill(), 5000)
+    return () => clearInterval(id)
+  }, [bill?._id, bill?.paymentStatus, bill?.discountGamePlayed, fetchBill])
 
   const handleRequestBill = async () => {
     setLoading(true); setError(null)
@@ -1039,7 +1051,8 @@ function BillModal({ tableNumber, onClose, billId, setBillId }) {
           onProceedToPayment={() => setShowWheel(false)}
           onBillUpdate={(updatedBill) => {
             setBill(updatedBill)
-            setShowWheel(false)
+            // Do NOT close the wheel here — the user sees the result and
+            // taps "Proceed to Payment" which calls onProceedToPayment above.
           }}
         />
       )}

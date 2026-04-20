@@ -170,110 +170,6 @@ function SpinWheel({ slices, wheelRef, isSpinning }) {
   )
 }
 
-// ─── Result celebration ───────────────────────────────────────────────────────
-
-function getCelebrationConfig(discount) {
-  if (discount === 100) {
-    return {
-      emoji:       "🤩🏆",
-      headline:    "JACKPOT! FREE MEAL!",
-      headlineCls: "jackpot-text text-4xl font-black text-amber-400",
-      confettiCnt: 40,
-      themeCls:    "from-amber-500/20 to-yellow-500/10",
-    }
-  }
-  if (discount >= 20) {
-    return {
-      emoji:       "🎉",
-      headline:    `Amazing! ${discount}% OFF!`,
-      headlineCls: "celebration-bounce text-3xl font-black text-amber-400",
-      confettiCnt: 30,
-      themeCls:    "from-amber-500/15 to-orange-500/10",
-    }
-  }
-  return {
-    emoji:       "🎊",
-    headline:    `You won ${discount}% OFF!`,
-    headlineCls: "celebration-bounce text-3xl font-black text-emerald-400",
-    confettiCnt: 22,
-    themeCls:    "from-emerald-500/15 to-green-500/10",
-  }
-}
-
-// ─── Bill breakdown preview ───────────────────────────────────────────────────
-
-function BillPreview({ bill, spinResult }) {
-  const afterOfferSubtotal  = bill.subtotal - (bill.discountAmount || 0)
-  const afterGameSubtotal   = afterOfferSubtotal - spinResult.discountAmount
-  const cashierPct          = bill.cashierDiscount || 0
-  let finalSubtotal = afterGameSubtotal
-  let cashierDiscAmt = 0
-  if (cashierPct > 0) {
-    cashierDiscAmt = Math.round(afterGameSubtotal * (cashierPct / 100))
-    finalSubtotal  = afterGameSubtotal - cashierDiscAmt
-  }
-  const vatPct    = bill.vatPercent || 13
-  const vatAmount = Math.round(finalSubtotal * (vatPct / 100))
-  const tipAmount = bill.tipAmount || 0
-  const total     = spinResult.newTotal
-
-  return (
-    <div className="bg-zinc-800/80 backdrop-blur rounded-2xl border border-zinc-700 p-5 w-full max-w-sm mx-auto">
-      <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Updated Bill</div>
-
-      <div className="space-y-2 text-sm">
-        <div className="flex justify-between text-zinc-300">
-          <span>Subtotal</span>
-          <span className="font-semibold">Rs. {bill.subtotal.toLocaleString()}</span>
-        </div>
-
-        {(bill.discountAmount || 0) > 0 && (
-          <div className="flex justify-between text-emerald-400">
-            <span>🏷️ Offer Discount</span>
-            <span className="font-semibold">−Rs. {bill.discountAmount.toLocaleString()}</span>
-          </div>
-        )}
-
-        <div className="flex justify-between text-violet-400">
-          <span>
-            🎲 Game Discount ({spinResult.discount === 100 ? "FREE!" : `${spinResult.discount}%`})
-          </span>
-          <span className="font-semibold">−Rs. {spinResult.discountAmount.toLocaleString()}</span>
-        </div>
-
-        {cashierDiscAmt > 0 && (
-          <div className="flex justify-between text-blue-400">
-            <span>🎟️ Cashier Discount ({cashierPct}%)</span>
-            <span className="font-semibold">−Rs. {cashierDiscAmt.toLocaleString()}</span>
-          </div>
-        )}
-
-        <div className="flex justify-between text-zinc-400 border-t border-zinc-700 pt-2">
-          <span>After Discounts</span>
-          <span className="font-semibold text-zinc-200">Rs. {finalSubtotal.toLocaleString()}</span>
-        </div>
-
-        <div className="flex justify-between text-zinc-400">
-          <span>VAT ({vatPct}%)</span>
-          <span className="font-semibold text-zinc-200">Rs. {vatAmount.toLocaleString()}</span>
-        </div>
-
-        {tipAmount > 0 && (
-          <div className="flex justify-between text-amber-400">
-            <span>🙏 Tip</span>
-            <span className="font-semibold">Rs. {tipAmount.toLocaleString()}</span>
-          </div>
-        )}
-
-        <div className="flex justify-between text-base font-black border-t border-zinc-600 pt-2.5 mt-1">
-          <span className="text-white">Total</span>
-          <span className="text-emerald-400">Rs. {total.toLocaleString()}</span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ─── Main Overlay ─────────────────────────────────────────────────────────────
 
 export default function SpinWheelOverlay({
@@ -283,10 +179,8 @@ export default function SpinWheelOverlay({
   onProceedToPayment,
   onBillUpdate,
 }) {
-  const [phase,      setPhase]      = useState("wheel")  // "wheel" | "result"
   const [spinning,   setSpinning]   = useState(false)
-  const [spun,       setSpun]       = useState(false)
-  const [spinResult, setSpinResult] = useState(null)
+  const [spinResult, setSpinResult] = useState(null)   // null until spin completes
   const [error,      setError]      = useState("")
 
   const wheelRef = useRef(null)
@@ -314,7 +208,7 @@ export default function SpinWheelOverlay({
 
   // ── Spin handler ─────────────────────────────────────────────────────────────
   const handleSpin = useCallback(async () => {
-    if (spinning || spun || slices.length === 0) return
+    if (spinning || spinResult || slices.length === 0) return
     setSpinning(true)
     setError("")
 
@@ -327,8 +221,11 @@ export default function SpinWheelOverlay({
         ?? slicePositions[0]
       const winnerCenter = winnerPos.startAngle + winnerPos.angle / 2
 
-      // 3. Calculate total rotation (5 full spins + angle to bring winner to top)
-      const targetRotation = 5 * 360 + winnerCenter
+      // 3. FIX: Correct rotation so the pointer (top) lands on the winner.
+      //    After a CW rotation of X degrees the pointer sees domain angle (360 - X) % 360.
+      //    To see domain angle D we need X = (360 - D) % 360.
+      //    With 6 full pre-spins: X = 6*360 - D  (always positive for D in [0,360)).
+      const targetRotation = 6 * 360 - winnerCenter
 
       // 4. Apply CSS transition + rotation directly via DOM ref for smooth animation
       if (wheelRef.current) {
@@ -337,18 +234,12 @@ export default function SpinWheelOverlay({
         wheelRef.current.style.transform  = `rotate(${targetRotation}deg)`
       }
 
-      setSpun(true)
-
-      // 5. Server auto-disables the game on this bill during spin (discountGameEnabled = false)
-      // No global toggle call needed.
-
-      // 6. After animation completes, switch to result screen
+      // 5. After animation completes, show result (wheel stays visible)
       setTimeout(() => {
         setSpinResult(result)
         setSpinning(false)
-        setPhase("result")
 
-        // 7. Update parent bill state to reflect new amounts
+        // 6. Update parent bill state to reflect new amounts
         if (onBillUpdate) {
           const afterOfferSubtotal = bill.subtotal - (bill.discountAmount || 0)
           const afterGameSubtotal  = afterOfferSubtotal - result.discountAmount
@@ -378,53 +269,93 @@ export default function SpinWheelOverlay({
       setError(err?.response?.data?.message || "Spin failed. Please skip to payment.")
       setSpinning(false)
     }
-  }, [bill, slices, slicePositions, spinning, spun, onBillUpdate])
-
-  // ── Celebration config ───────────────────────────────────────────────────────
-  const celebration = spinResult ? getCelebrationConfig(spinResult.discount) : null
+  }, [bill, slices, slicePositions, spinning, spinResult, onBillUpdate])
 
   // ──────────────────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* Confetti — only on result phase */}
-      {phase === "result" && celebration && (
-        <Confetti count={celebration.confettiCnt} />
-      )}
+      {/* Confetti — only after result */}
+      {spinResult && <Confetti count={spinResult.discount >= 20 ? 35 : 22} />}
 
       {/* Overlay backdrop */}
       <div
         className="fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-y-auto py-6"
-        style={{ background: "rgba(0,0,0,0.82)", backdropFilter: "blur(4px)" }}
+        style={{ background: "rgba(0,0,0,0.88)", backdropFilter: "blur(4px)" }}
       >
+        <div className="flex flex-col items-center gap-5 w-full max-w-md px-4">
 
-        {/* ── WHEEL PHASE ─────────────────────────────────────────────────── */}
-        {phase === "wheel" && (
-          <div className="flex flex-col items-center gap-6 w-full max-w-md px-4">
-
-            {/* Header */}
+          {/* ── Header ───────────────────────────────────────────────────── */}
+          {!spinResult ? (
             <div className="text-center">
               <h2 className="text-3xl font-black text-white tracking-tight">
                 Spin to Win Your Discount!
               </h2>
-              <p className="text-zinc-400 mt-1.5 text-sm">Try your luck!</p>
+              <p className="text-zinc-400 mt-1.5 text-sm">Try your luck before paying</p>
             </div>
-
-            {/* The Wheel */}
-            {slices.length > 0 ? (
-              <SpinWheel slices={slices} wheelRef={wheelRef} isSpinning={spinning} />
-            ) : (
-              <div className="w-[300px] h-[300px] rounded-full bg-zinc-700 flex items-center justify-center text-zinc-400 text-sm">
-                Loading wheel…
+          ) : (
+            <div className="text-center">
+              <div className="text-4xl mb-1">
+                {spinResult.discount === 100 ? "🏆" : spinResult.discount >= 20 ? "🎉" : "🎊"}
               </div>
-            )}
+              <div className="text-2xl font-black text-white">
+                {spinResult.discount === 100 ? "JACKPOT! FREE MEAL!" : "You won a discount!"}
+              </div>
+            </div>
+          )}
 
-            {/* Spin Button */}
+          {/* ── The Wheel — always visible ───────────────────────────────── */}
+          {slices.length > 0 ? (
+            <SpinWheel slices={slices} wheelRef={wheelRef} isSpinning={spinning} />
+          ) : (
+            <div className="w-[300px] h-[300px] rounded-full bg-zinc-700 flex items-center justify-center text-zinc-400 text-sm">
+              Loading wheel…
+            </div>
+          )}
+
+          {/* ── Result panel — shown after spin, below the wheel ─────────── */}
+          {spinResult && (
+            <div className="w-full space-y-3">
+              {/* Big discount badge */}
+              <div
+                className="w-full py-4 rounded-2xl text-center"
+                style={{ background: spinResult.color || "#10b981" }}
+              >
+                <div className="text-3xl font-black text-white">
+                  {spinResult.discount === 100 ? "100% FREE!" : `${spinResult.discount}% OFF`}
+                </div>
+                <div className="text-white/80 text-sm font-semibold mt-0.5">
+                  Rs. {spinResult.discountAmount.toLocaleString()} deducted from your bill
+                </div>
+              </div>
+
+              {/* New total */}
+              <div className="bg-zinc-800/90 border border-zinc-700 rounded-2xl px-5 py-4 flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-zinc-400 font-medium">New Total</div>
+                  <div className="text-2xl font-black text-emerald-400">
+                    Rs. {spinResult.newTotal.toLocaleString()}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-zinc-500 line-through">
+                    Rs. {(bill.totalAmount || 0).toLocaleString()}
+                  </div>
+                  <div className="text-xs font-bold text-emerald-400 mt-0.5">
+                    You saved Rs. {spinResult.discountAmount.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Spin button — before spin ─────────────────────────────────── */}
+          {!spinResult && (
             <button
               onClick={handleSpin}
-              disabled={spinning || spun || slices.length === 0}
+              disabled={spinning || slices.length === 0}
               className={[
                 "px-12 py-4 rounded-2xl text-lg font-black transition-all shadow-xl",
-                spinning || spun || slices.length === 0
+                spinning || slices.length === 0
                   ? "bg-zinc-600 text-zinc-400 cursor-not-allowed"
                   : "bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-400 hover:to-green-500 hover:-translate-y-0.5 active:scale-95 shadow-emerald-500/30",
               ].join(" ")}
@@ -436,66 +367,38 @@ export default function SpinWheelOverlay({
                   </svg>
                   Spinning…
                 </span>
-              ) : spun ? "Spinning…" : "🎰 Spin!"}
+              ) : "🎰 Spin!"}
             </button>
+          )}
 
-            {/* Error */}
-            {error && (
-              <div className="flex items-center gap-2 text-sm text-red-300 bg-red-950/60 border border-red-800 px-4 py-3 rounded-xl w-full">
-                <span>⚠</span>
-                <span className="flex-1">{error}</span>
-              </div>
-            )}
-
-            {/* Skip link */}
-            {!spinning && !spun && (
-              <button
-                onClick={onSkip}
-                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-2"
-              >
-                Skip → Payment
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* ── RESULT PHASE ────────────────────────────────────────────────── */}
-        {phase === "result" && celebration && spinResult && (
-          <div className="flex flex-col items-center gap-5 w-full max-w-md px-4">
-
-            {/* Emoji */}
-            <div className="text-6xl select-none">{celebration.emoji}</div>
-
-            {/* Headline */}
-            <div
-              className={celebration.headlineCls}
-              style={{ textAlign: "center" }}
-            >
-              {celebration.headline}
-            </div>
-
-            {/* Discount badge */}
-            <div
-              className="px-6 py-2 rounded-full text-sm font-bold text-white"
-              style={{ background: spinResult.color || "#10b981" }}
-            >
-              {spinResult.discount === 100
-                ? "100% — Completely FREE!"
-                : `${spinResult.discount}% discount applied!`}
-            </div>
-
-            {/* Bill preview card */}
-            <BillPreview bill={bill} spinResult={spinResult} />
-
-            {/* Proceed button */}
+          {/* ── Proceed button — after spin ───────────────────────────────── */}
+          {spinResult && (
             <button
               onClick={onProceedToPayment}
-              className="w-full max-w-sm py-4 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white rounded-2xl font-black text-base transition-all shadow-xl shadow-emerald-500/20 hover:-translate-y-0.5 flex items-center justify-center gap-2"
+              className="w-full py-4 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white rounded-2xl font-black text-base transition-all shadow-xl shadow-emerald-500/20 hover:-translate-y-0.5 flex items-center justify-center gap-2"
             >
               Proceed to Payment →
             </button>
-          </div>
-        )}
+          )}
+
+          {/* ── Error ─────────────────────────────────────────────────────── */}
+          {error && (
+            <div className="flex items-center gap-2 text-sm text-red-300 bg-red-950/60 border border-red-800 px-4 py-3 rounded-xl w-full">
+              <span>⚠</span>
+              <span className="flex-1">{error}</span>
+            </div>
+          )}
+
+          {/* ── Skip link — before spin only ─────────────────────────────── */}
+          {!spinning && !spinResult && (
+            <button
+              onClick={onSkip}
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-2"
+            >
+              Skip → Payment
+            </button>
+          )}
+        </div>
       </div>
     </>
   )
