@@ -12,9 +12,14 @@ const tableSchema = new mongoose.Schema(
       required: true,
       default: 4,
     },
+    category: {
+      type: String,
+      default: "Main Floor",
+      trim: true,
+    },
     status: {
       type: String,
-      enum: ["available", "occupied", "reserved"],
+      enum: ["available", "occupied", "billing", "reserved"],
       default: "available",
     },
     customerCount: {

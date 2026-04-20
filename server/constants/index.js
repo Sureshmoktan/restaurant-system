@@ -16,27 +16,29 @@ const ORDER_STATUS = {
 const TABLE_STATUS = {
   AVAILABLE: "available",
   OCCUPIED:  "occupied",
-  BILLED:    "billed",
+  BILLING:   "billing",   // ✅ renamed from BILLED — table is ready for cashier
+  RESERVED:  "reserved",
 }
 
 const FOOD_CATEGORIES = [
   "Breakfast",
-  "Lunch", 
-  "Dinner",
+  "Thakali",
   "Snacks",
+  "Pizza",
+  "Non-Veg Special",
   "Desserts",
-  "Specials",
-];
+  "Special",
+]
 
 const BAR_CATEGORIES = [
   "Beverages",
-  "Cocktails",
-  "Mocktails",
+  "Seasonal Drinks",
   "Beer",
   "Wine",
-];
+  "Hard Drinks",
+]
 
-const MENU_CATEGORIES = [...FOOD_CATEGORIES, ...BAR_CATEGORIES];
+const MENU_CATEGORIES = [...FOOD_CATEGORIES, ...BAR_CATEGORIES]
 
 const OPTION_TYPES = {
   SCALE:    "scale",
@@ -54,6 +56,7 @@ const PAYMENT_METHODS = [
 const PAYMENT_STATUS = {
   PAID:   "paid",
   UNPAID: "unpaid",
+  VOID:   "void",   // stale / superseded bills — never shown to customer or cashier
 }
 
 const VAT_PERCENT = 13
@@ -73,16 +76,20 @@ const PAGINATION = {
 }
 
 const SOCKET_EVENTS = {
-  JOIN_TABLE:      "join-table",
-  JOIN_KITCHEN:    "join-kitchen",
-  JOIN_CASHIER:    "join-cashier",
-  NEW_ORDER:       "new-order",
-  ORDER_STATUS:    "order-status-update",
-  ORDER_CANCELLED: "order-cancelled",
-  ORDER_READY:     "order-ready",
-  TABLE_STATUS:    "table-status-update",
-  NEW_BILL:        "new-bill",
-  JOIN_BAR:        "join-bar",
+  JOIN_TABLE:           "join-table",
+  JOIN_KITCHEN:         "join-kitchen",
+  JOIN_CASHIER:         "join-cashier",
+  JOIN_BAR:             "join-bar",
+  NEW_ORDER:            "new-order",
+  ORDER_STATUS:         "order-status-update",
+  ORDER_CANCELLED:      "order-cancelled",
+  ORDER_READY:          "order-ready",
+  TABLE_STATUS:         "table-status-update",
+  NEW_BILL:             "new-bill",
+  NEW_FEEDBACK:         "new-feedback",
+  ORDER_ESTIMATED:      "order-estimated",
+  BILL_PAID:            "bill-paid",
+  BILL_PAYMENT_FAILED:  "bill-payment-failed",
 }
 
 const TOKEN = {

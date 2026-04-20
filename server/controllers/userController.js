@@ -3,6 +3,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const MESSAGES = require("../constants/messages");
 const STATUS_CODES = require("../constants/statusCodes");
 const ROLES = require("../constants/roles");
+const { logAudit, getIp } = require("../utils/auditHelper");
 
 // @desc    Create new user (cashier or kitchen)
 // @route   POST /api/users
@@ -28,6 +29,17 @@ const createUser = asyncHandler(async (req, res) => {
   }
 
   const user = await User.create({ name, email, password, role });
+
+  logAudit({
+    action:      "USER_CREATE",
+    actor:       req.user._id,
+    actorName:   req.user.name,
+    actorRole:   req.user.role,
+    targetModel: "User",
+    targetId:    user._id,
+    details:     { name: user.name, email: user.email, role: user.role },
+    ip:          getIp(req),
+  });
 
   res.status(STATUS_CODES.CREATED).json({
     success: true,
@@ -106,6 +118,17 @@ const updateUser = asyncHandler(async (req, res) => {
     { new: true, runValidators: true }
   );
 
+  logAudit({
+    action:      "USER_UPDATE",
+    actor:       req.user._id,
+    actorName:   req.user.name,
+    actorRole:   req.user.role,
+    targetModel: "User",
+    targetId:    req.params.id,
+    details:     { name: updated.name, email: updated.email, role: updated.role, isActive: updated.isActive },
+    ip:          getIp(req),
+  });
+
   res.status(STATUS_CODES.OK).json({
     success: true,
     message: MESSAGES.USER.UPDATED,
@@ -125,6 +148,17 @@ const deactivateUser = asyncHandler(async (req, res) => {
   }
 
   await User.findByIdAndUpdate(req.params.id, { isActive: false });
+
+  logAudit({
+    action:      "USER_DEACTIVATE",
+    actor:       req.user._id,
+    actorName:   req.user.name,
+    actorRole:   req.user.role,
+    targetModel: "User",
+    targetId:    req.params.id,
+    details:     { name: user.name, email: user.email, role: user.role },
+    ip:          getIp(req),
+  });
 
   res.status(STATUS_CODES.OK).json({
     success: true,

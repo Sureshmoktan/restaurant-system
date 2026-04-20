@@ -4,6 +4,7 @@ const MESSAGES = require("../constants/messages");
 const STATUS_CODES = require("../constants/statusCodes");
 const { BAR_CATEGORIES } = require("../constants");
 const { uploadToCloudinary, deleteFromCloudinary } = require("../config/cloudinary");
+const { logAudit, getIp } = require("../utils/auditHelper");
 
 const getDestination = (category) => BAR_CATEGORIES.includes(category) ? "bar" : "kitchen";
 
@@ -51,7 +52,7 @@ const createMenuItem = asyncHandler(async (req, res) => {
   const {
     name, description, category,
     price, isVeg, isAvailable,
-    ingredients, optionGroups,
+    ingredients, optionGroups, variantGroups, recipe,
   } = req.body;
 
   let imageUrl = "";
@@ -71,18 +72,39 @@ const createMenuItem = asyncHandler(async (req, res) => {
     ? typeof optionGroups === "string" ? JSON.parse(optionGroups) : optionGroups
     : [];
 
+  const parsedVariantGroups = variantGroups
+    ? typeof variantGroups === "string" ? JSON.parse(variantGroups) : variantGroups
+    : [];
+
+  const parsedRecipe = recipe
+    ? typeof recipe === "string" ? JSON.parse(recipe) : recipe
+    : [];
+
   const item = await Menu.create({
     name,
     description,
     category,
-    price:        Number(price),
-    isVeg:        isVeg === "true" || isVeg === true,
-    isAvailable:  isAvailable !== "false",
-    image:        imageUrl,
+    price:         parsedVariantGroups.length > 0 ? 0 : Number(price),
+    variantGroups: parsedVariantGroups,
+    isVeg:         isVeg === "true" || isVeg === true,
+    isAvailable:   isAvailable !== "false",
+    image:         imageUrl,
     imagePublicId,
-    ingredients:  parsedIngredients,
-    optionGroups: parsedOptionGroups,
-    destination:  getDestination(category),
+    ingredients:   parsedIngredients,
+    optionGroups:  parsedOptionGroups,
+    recipe:        parsedRecipe,
+    destination:   getDestination(category),
+  });
+
+  logAudit({
+    action:      "MENU_CREATE",
+    actor:       req.user?._id,
+    actorName:   req.user?.name,
+    actorRole:   req.user?.role,
+    targetModel: "Menu",
+    targetId:    item._id,
+    details:     { name: item.name, category: item.category, price: item.price },
+    ip:          getIp(req),
   });
 
   res.status(STATUS_CODES.CREATED).json({
@@ -106,7 +128,7 @@ const updateMenuItem = asyncHandler(async (req, res) => {
   const {
     name, description, category,
     price, isVeg, isAvailable,
-    ingredients, optionGroups,
+    ingredients, optionGroups, variantGroups, recipe,
   } = req.body;
 
   let imageUrl = item.image;
@@ -127,23 +149,44 @@ const updateMenuItem = asyncHandler(async (req, res) => {
     ? typeof optionGroups === "string" ? JSON.parse(optionGroups) : optionGroups
     : item.optionGroups;
 
+  const parsedVariantGroups = variantGroups
+    ? typeof variantGroups === "string" ? JSON.parse(variantGroups) : variantGroups
+    : item.variantGroups;
+
+  const parsedRecipe = recipe !== undefined
+    ? typeof recipe === "string" ? JSON.parse(recipe) : recipe
+    : item.recipe;
+
   const updated = await Menu.findByIdAndUpdate(
     req.params.id,
     {
       name,
       description,
       category,
-      price:        Number(price),
-      isVeg:        isVeg === "true" || isVeg === true,
-      isAvailable:  isAvailable !== "false",
-      image:        imageUrl,
+      price:         parsedVariantGroups.length > 0 ? 0 : Number(price),
+      variantGroups: parsedVariantGroups,
+      isVeg:         isVeg === "true" || isVeg === true,
+      isAvailable:   isAvailable !== "false",
+      image:         imageUrl,
       imagePublicId,
-      ingredients:  parsedIngredients,
-      optionGroups: parsedOptionGroups,
-      destination:  getDestination(category),
+      ingredients:   parsedIngredients,
+      optionGroups:  parsedOptionGroups,
+      recipe:        parsedRecipe,
+      destination:   getDestination(category),
     },
     { new: true, runValidators: true }
   );
+
+  logAudit({
+    action:      "MENU_UPDATE",
+    actor:       req.user?._id,
+    actorName:   req.user?.name,
+    actorRole:   req.user?.role,
+    targetModel: "Menu",
+    targetId:    req.params.id,
+    details:     { name: updated.name, category: updated.category, price: updated.price },
+    ip:          getIp(req),
+  });
 
   res.status(STATUS_CODES.OK).json({
     success: true,
@@ -151,7 +194,6 @@ const updateMenuItem = asyncHandler(async (req, res) => {
     item: updated,
   });
 });
-
 // @desc   Delete menu item
 // @route  DELETE /api/v1/menu/:id
 // @access Admin only
@@ -165,6 +207,17 @@ const deleteMenuItem = asyncHandler(async (req, res) => {
 
   if (item.imagePublicId) await deleteFromCloudinary(item.imagePublicId);
   await Menu.findByIdAndDelete(req.params.id);
+
+  logAudit({
+    action:      "MENU_DELETE",
+    actor:       req.user?._id,
+    actorName:   req.user?.name,
+    actorRole:   req.user?.role,
+    targetModel: "Menu",
+    targetId:    req.params.id,
+    details:     { name: item.name, category: item.category },
+    ip:          getIp(req),
+  });
 
   res.status(STATUS_CODES.OK).json({
     success: true,

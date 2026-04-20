@@ -4,6 +4,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const MESSAGES = require("../constants/messages");
 const STATUS_CODES = require("../constants/statusCodes");
 const authMiddleware = require("../middlewares/authMiddleware");
+const { logAudit, getIp } = require("../utils/auditHelper");
 
 // Generate tokens
 const generateTokens = (userId) => {
@@ -51,6 +52,17 @@ const login = asyncHandler(async (req, res) => {
     sameSite: "lax",
 
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+
+  logAudit({
+    action:      "USER_LOGIN",
+    actor:       user._id,
+    actorName:   user.name,
+    actorRole:   user.role,
+    targetModel: "User",
+    targetId:    user._id,
+    details:     { email: user.email },
+    ip:          getIp(req),
   });
 
   res.status(STATUS_CODES.OK).json({
@@ -104,6 +116,17 @@ const refresh = asyncHandler(async (req, res) => {
 // @route   POST /api/auth/logout
 // @access  Private
 const logout = asyncHandler(async (req, res) => {
+  logAudit({
+    action:      "USER_LOGOUT",
+    actor:       req.user._id,
+    actorName:   req.user.name,
+    actorRole:   req.user.role,
+    targetModel: "User",
+    targetId:    req.user._id,
+    details:     {},
+    ip:          getIp(req),
+  });
+
   res.clearCookie("refreshToken");
   res.status(STATUS_CODES.OK).json({
     success: true,

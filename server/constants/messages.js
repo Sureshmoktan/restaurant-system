@@ -65,6 +65,14 @@ const MESSAGES = {
     ALREADY_PAID: "Bill has already been paid",
   },
 
+  // Feedback
+  FEEDBACK: {
+    CREATED:        "Feedback submitted successfully",
+    NOT_FOUND:      "Feedback not found",
+    ALREADY_EXISTS: "Feedback already submitted for this bill",
+    FETCHED:        "Feedback fetched successfully",
+  },
+
   // General
   GENERAL: {
     SERVER_ERROR: "Internal server error",

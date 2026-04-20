@@ -18,6 +18,17 @@ const tableRoutes = require("./routes/tableRoutes")
 const orderRoutes = require("./routes/orderRoutes")
 const billRoutes  = require("./routes/billRoutes")
 const adminRoutes = require("./routes/adminRoutes")
+const offerRoutes = require("./routes/offerRoutes")
+const cashoutRoutes = require("./routes/cashoutRoutes.js")
+const recommendationRoutes = require("./routes/recommendationRoutes")
+const forecastRoutes       = require("./routes/forecastRoutes")
+const ingredientRoutes     = require("./routes/ingredientRoutes")
+const purchaseRoutes       = require("./routes/purchaseRoutes")
+const wasteRoutes          = require("./routes/wasteRoutes")
+const feedbackRoutes       = require("./routes/feedbackRoutes")
+const discountGameRoutes   = require("./routes/discountGameRoutes")
+const auditRoutes          = require("./routes/auditRoutes")
+
 
 const app    = express()
 const server = http.createServer(app)
@@ -57,7 +68,20 @@ app.use("/api/v1/tables", tableRoutes)
 app.use("/api/v1/orders", orderRoutes)
 app.use("/api/v1/bills",  billRoutes)
 app.use("/api/v1/admin",  adminRoutes)
+app.use("/api/v1/offers", offerRoutes);
+app.use("/api/v1/cashouts", cashoutRoutes)
+app.use("/api/v1/recommendations", recommendationRoutes)
+app.use("/api/v1/forecast",     forecastRoutes)
+app.use("/api/v1/ingredients", ingredientRoutes)
+app.use("/api/v1/purchases",  purchaseRoutes)
+app.use("/api/v1/waste",      wasteRoutes)
+app.use("/api/v1/feedback",      feedbackRoutes)
+app.use("/api/v1/discount-game", discountGameRoutes)
+app.use("/api/v1/audit",        auditRoutes)
 
+app.get("/api/v1/test", (req, res) => {
+  res.json({ success: true, message: "test works" })
+})
 
 io.on("connection", (socket) => {
   console.log(`Socket connected: ${socket.id}`)
@@ -94,6 +118,6 @@ app.use((req, res) => {
 app.use(errorHandler)
 
 const PORT = process.env.PORT || 8000
-server.listen(PORT, () => {
+server.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`)
 })
