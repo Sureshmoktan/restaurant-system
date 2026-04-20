@@ -1,0 +1,55 @@
+services:
+  # ── Node.js Backend ───────────────────────────────────────────────────────────
+  - type: web
+    name: himalaya-kitchen-backend
+    env: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: ALLOWED_ORIGIN
+        sync: false
+      - key: FLASK_URL
+        sync: false
+      - key: PROPHET_URL
+        sync: false
+      - key: ADMIN_NAME
+        value: Admin
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+  # ── Flask ML Service — Apriori Recommendations (port auto-assigned by Render) ─
+  - type: web
+    name: himalaya-kitchen-ml
+    env: python
+    rootDir: ml
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+
+  # ── Flask Prophet Service — Demand Forecasting (port auto-assigned by Render) ─
+  - type: web
+    name: himalaya-kitchen-prophet
+    env: python
+    rootDir: ml
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT prophet_app:app

@@ -7,6 +7,7 @@ export default defineConfig({
     react(),
     tailwindcss()
   ],
+  // `server` block applies to `vite dev` only — ignored in `vite build`
   server: {
     host: true,
     port: 3000,

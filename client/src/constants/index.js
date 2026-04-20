@@ -1,5 +1,5 @@
 export const API_URL    = "/api/v1"
-export const SOCKET_URL = "http://localhost:8000"
+export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:8000"
 export const VAT_PERCENT = 13
 
 export const ROLES = {

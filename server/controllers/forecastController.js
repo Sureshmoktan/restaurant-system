@@ -1,6 +1,6 @@
 const asyncHandler = require("../utils/asyncHandler")
 
-const PROPHET_URL = "http://localhost:5001"
+const PROPHET_URL = process.env.PROPHET_URL || "http://localhost:5001"
 
 // ── GET /api/v1/forecast/orders ───────────────────────────────────────────────
 const getForecastOrders = asyncHandler(async (req, res) => {

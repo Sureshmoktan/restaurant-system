@@ -1,7 +1,7 @@
 const asyncHandler = require("../utils/asyncHandler")
 const Order        = require("../models/Order")
 
-const FLASK_URL = "http://localhost:5000"
+const FLASK_URL = process.env.FLASK_URL || "http://localhost:5000"
 
 // ── GET /api/v1/recommendations?items=Momo,Sekuwa ─────────────────────────────
 const getRecommendations = asyncHandler(async (req, res) => {

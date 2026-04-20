@@ -37,6 +37,7 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:5173",
   process.env.CLIENT_URL,
+  process.env.ALLOWED_ORIGIN,
 ].filter(Boolean)
 
 const io = new Server(server, {
