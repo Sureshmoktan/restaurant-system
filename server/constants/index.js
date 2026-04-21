@@ -49,8 +49,8 @@ const OPTION_TYPES = {
 const PAYMENT_METHODS = [
   "cash",
   "esewa",
-  "khalti",
-  "card",
+  "bank",
+  
 ]
 
 const PAYMENT_STATUS = {

@@ -31,15 +31,4 @@ const protect = asyncHandler(async (req, res, next) => {
   next();
 });
 
-// // Restrict to specific roles
-// const restrictTo = (...roles) => {
-//   return (req, res, next) => {
-//     if (!roles.includes(req.user.role)) {
-//       res.status(STATUS_CODES.FORBIDDEN);
-//       throw new Error(MESSAGES.GENERAL.FORBIDDEN);
-//     }
-//     next();
-//   };
-// };
-
 module.exports = protect;
